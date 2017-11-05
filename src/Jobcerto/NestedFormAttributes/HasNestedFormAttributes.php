@@ -2,8 +2,34 @@
 
 namespace Jobcerto\NestedFormAttributes;
 
+
+use Illuminate\Support\Collection;
+
 trait HasNestedFormAttributes
 {
+
+    /**
+     * Boot the trait and create an macro to work 
+     * with collections and make sure all fields
+     * in the array are in correct order
+     * 
+     * @return mixed 
+     */
+    public static function bootHasNestedFormAttributes()
+    {
+
+        Collection::macro('transpose', function($keys = null) {
+
+            $keys = $keys ?: range(0, static::count() - 1);
+            $items = array_map(function(...$items) use ($keys) {
+
+                return array_combine($keys, $items);
+            }, ...static::values());
+
+            return new static($items);
+        });
+    }
+
 
     /**
      * Saved model for use on many to many relations
@@ -16,39 +42,46 @@ trait HasNestedFormAttributes
      * Handler with nested relations
      *
      * @param array $attributes
+     *
+     * @return mixed
      */
     public function handlerNestedAttributes(array $attributes)
     {
 
-        $collection = $this->sortNestedAttributes($attributes);
-        foreach( $collection as $relation => $values ) {
-            $method = sprintf('save%s', $relation);
-            $this->{$method}($values);
+        $nestedAttributes = $this->sortNestedAttributes($attributes);
+
+        foreach( $nestedAttributes as $relation => $collection ) {
+
+            $relationName = $this->getRelationName($collection);
+
+            $method = $this->getMethodName($relation);
+
+            $this->{$method}($collection->first(), $relationName);
+
         }
 
         return $this->load($this->nested);
-
     }
 
 
     /**
      * Save the BelongsTo Relation
      *
-     * @param $collection
+     * @param $items
+     * @param $method
      */
-    protected function saveBelongsTo($collection)
+    protected function saveBelongsTo($items, $method)
     {
 
-        $collection->each(function($attributes) {
+        collect($items)->each(function($attributes) use ($method) {
 
-            $method = array_keys($attributes)[0];
-            $values = array_values($attributes)[0];
-            $this->{$method}()->associate($values);
+            $this->{$method}()->associate($attributes);
         });
+
         $this->save();
 
         // Because this relation interacts directly with an saved model
-        //We have to retorn this saved model in order to work with all
+        //We have to return this saved model in order to work with all
         //other kind of relationships
         $this->savedModel = $this;
     }
@@ -57,17 +90,15 @@ trait HasNestedFormAttributes
     /**
      * Save the BelongsToMany Relation
      *
-     * @param $collection
+     * @param $items
+     * @param $method
      */
-    protected function saveBelongsToMany($collection)
+    protected function saveBelongsToMany($items, $method)
     {
 
-        $collection->each(function($attributes) {
+        collect($items)->each(function($attributes) use ($method) {
 
-            $method = array_keys($attributes)[0];
-            $values = array_values($attributes)[0];
-
-            $this->{$method}()->attach($values);
+            $this->{$method}()->attach($attributes);
         });
 
     }
@@ -76,17 +107,22 @@ trait HasNestedFormAttributes
     /**
      * save the HasMany Relation
      *
-     * @param $collection
+     * @param $items
+     * @param $method
      */
-    protected function saveHasMany($collection)
+    protected function saveHasMany($items, $method)
     {
 
-        $collection->each(function($attributes) {
+        $items = $items[ $method ];
 
-            $method = array_keys($attributes)[0];
-            $values = array_values($attributes)[0];
+        $keys = array_keys($items);
 
-            $this->{$method}()->createMany($values);
+        collect($items)->transpose($keys)->map(function($data) {
+
+            return $data;
+        })->each(function($attributes) use ($method) {
+
+            $this->{$method}()->create($attributes);
         });
     }
 
@@ -94,41 +130,41 @@ trait HasNestedFormAttributes
     /**
      * save the MorphToMany Relation
      *
-     * @param $collection
+     * @param $items
+     * @param $method
      */
-    protected function saveMorphToMany($collection)
+    protected function saveMorphToMany($items, $method)
     {
 
-        $this->saveBelongsToMany($collection);
+        $this->saveBelongsToMany($items, $method);
     }
 
 
     /**
      * save the MorphMany Relation
      *
-     * @param $collection
+     * @param $items
+     * @param $method
      */
-    protected function saveMorphMany($collection)
+    protected function saveMorphMany($items, $method)
     {
 
-        $this->saveHasMany($collection);
+        $this->saveHasMany($items, $method);
     }
 
 
     /**
      * save the HasMany Relation
      *
-     * @param $collection
+     * @param $items
+     * @param $method
      */
-    protected function saveHasOne($collection)
+    protected function saveHasOne($items, $method)
     {
 
-        $collection->each(function($attributes) {
+        collect($items)->each(function($attributes) use ($method) {
 
-            $method = array_keys($attributes)[0];
-            $values = array_values($attributes)[0];
-
-            $this->{$method}()->create($values);
+            $this->{$method}()->create($attributes);
         });
     }
 
@@ -196,11 +232,40 @@ trait HasNestedFormAttributes
 
             return [
                 $this->getClassShortName($relation) => [
-                    $relation => $values
-                ]
+                    $relation => $values,
+                ],
             ];
         });
 
         return $nestedRelations;
     }
+
+
+    /**
+     * Get the method name
+     *
+     * @param $relation
+     *
+     * @return string
+     */
+    private function getMethodName($relation)
+    {
+
+        return sprintf('save%s', $relation);
+    }
+
+
+    /**
+     * Get the relationship name
+     *
+     * @param $collection
+     *
+     * @return mixed
+     */
+    private function getRelationName($collection)
+    {
+
+        return array_keys($collection[0])[0];
+    }
+
 }
