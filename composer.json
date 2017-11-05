@@ -1,0 +1,22 @@
+{
+    "name": "jobcerto/nested-form-attributes",
+    "description": "Save nested form attributes",
+    "license": "MIT",
+    "authors": [
+    {
+        "name": "Eduardo Geschonke",
+        "email": "edu@jobcerto.com"
+    }],
+    "require":
+    {
+        "illuminate/http": "~5.0",
+        "illuminate/support": "~5.0"
+    },
+    "autoload":
+    {
+        "psr-0":
+        {
+            "Jobcerto\\NestedFormAttributes": "src/"
+        }
+    }
+}
