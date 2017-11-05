@@ -56,11 +56,12 @@ Um exmeplo de campos:
   <!-- Campo bsico para salvar o model user. -->
 
         <label>Name</label>
-        <input type="text" class="form-control" name="user[name]" value="EDUARDO">
+        <input type="text" class="form-control" name="user[name]" value="User Name">
   
   <!-- Modelo padrão para um insert do tipo morphMany -->
         <label>Comments</label>
-        <input type="text" class="form-control" name="user[comments][][name]" value="MEU COMENTARIO">
+        <input type="text" class="form-control" name="user[comments][title][]" value="Comment Title">
+        <input type="text" class="form-control" name="user[comments][body][]" value="Comment body">
    
   <!-- Modelo padrão para um insert do tipo belongsTo -->
         <label>Country</label>
@@ -104,9 +105,9 @@ Um exmeplo de campos:
 
   <!-- Modelo padrão para um insert do tipo hasMany -->
         <label>Friends</label>
-        <select name="user[friends][]" class="form-control" multiple>
+        <select name="user[friends][name][]" class="form-control" multiple>
             @foreach(App\Friend::all() as $friend)
-            <option selected value="{{ $friend->id }}">{{ $friend->name }}</option>
+            <option selected value="{{ $friend->name }}">{{ $friend->name }}</option>
             @endforeach
         </select>
 
