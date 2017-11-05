@@ -1,10 +1,7 @@
-<?php namespace Jobcerto\NestedFormAttributes;
+<?php 
 
+namespace Jobcerto\NestedFormAttributes;
 
-/**
- * Trait HasNestedAttributes
- * @package App\Traits
- */
 trait HasNestedFormAttributes
 {
 
